@@ -122,17 +122,34 @@ db.on("end", () => {
 export default db;
 
 export const g = async (k) => {
-  const v = await db.get(k);
   try {
-    return JSON.parse(v);
+    if (!db.isOpen) {
+      await db.connect();
+    }
+    const v = await db.get(k);
+    if (v === null) return null;
+    try {
+      return JSON.parse(v);
+    } catch (e) {
+      return v;
+    }
   } catch (e) {
-    return v;
+    err("Database get error", k, e.message);
+    throw e;
   }
 };
 
-export const s = (k, v) => {
+export const s = async (k, v) => {
   if (k === "user:null" || k === "user:undefined") fail("null user");
-  db.set(k, JSON.stringify(v));
+  try {
+    if (!db.isOpen) {
+      await db.connect();
+    }
+    await db.set(k, JSON.stringify(v));
+  } catch (e) {
+    err("Database set error", k, e.message);
+    throw e;
+  }
 };
 
 export const ga = async (k) => {

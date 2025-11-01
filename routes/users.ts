@@ -123,8 +123,8 @@ export default {
   async create(req, res) {
     const { body, headers } = req;
     try {
-      const ip = headers["cf-connecting-ip"];
-      if (!body.user) fail("no user object provided");
+      const ip = headers["cf-connecting-ip"] || req.socket?.remoteAddress || "127.0.0.1";
+      if (!body || !body.user) fail("no user object provided");
       let { user } = body;
 
       const fields = ["pubkey", "password", "username", "picture", "fresh"];
@@ -136,9 +136,11 @@ export default {
       l("registered new user", user.username);
 
       res.send({ ...pick(user, whitelist), sk: user.sk, token });
-    } catch (e) {
-      err("problem registering", e.message);
-      res.code(500).send(e.message);
+    } catch (e: any) {
+      const errorMessage = e?.message || e?.toString() || "Unknown error during registration";
+      err("problem registering", errorMessage);
+      console.error("Registration error:", e);
+      res.code(500).send(errorMessage);
     }
   },
 
@@ -327,6 +329,10 @@ export default {
     try {
       let { challenge, username, password, token: twofa } = req.body;
 
+      if (!username || !password) {
+        return res.code(400).send("Username and password required");
+      }
+
       const fk = `${username}:failures`;
       const failures = await g(fk);
 
@@ -366,9 +372,11 @@ export default {
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       user = pick(user, whitelist);
       res.send({ user, token });
-    } catch (e) {
-      err("login error", e.message, req.socket.remoteAddress);
-      res.code(401).send({});
+    } catch (e: any) {
+      const errorMessage = e?.message || e?.toString() || "Unknown login error";
+      err("login error", errorMessage, req.socket?.remoteAddress);
+      console.error("Login error details:", e);
+      res.code(401).send({ error: errorMessage });
     }
   },
 
