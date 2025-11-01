@@ -3,19 +3,16 @@ import { admin, auth, optional } from "$lib/auth";
 
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
-import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 
-import ecash from "$routes/ecash";
 import email from "$routes/email";
 import info from "$routes/info";
 import invoices from "$routes/invoices";
 import items from "$routes/items";
 import lnurl from "$routes/lnurl";
 import locations from "$routes/locations";
-import nostr from "$routes/nostr";
 import payments from "$routes/payments";
 import rates from "$routes/rates";
 import shopify from "$routes/shopify";
@@ -26,7 +23,6 @@ try {
   getLocations();
   getFx();
   catchUp();
-  nwc();
   check();
 } catch (e) {
   console.log(e);
@@ -51,20 +47,6 @@ app.post("/invoice/:id", optional, invoices.update);
 app.post("/sign", auth, invoices.sign);
 
 app.get("/assetlinks.json", (_, res) => res.sendFile("assetlinks.json"));
-app.get("/nostr.json", nostr.identities);
-app.get("/profile/:profile", nostr.profile);
-app.get("/:pubkey/count", nostr.count);
-app.get("/:pubkey/followers", nostr.followers);
-app.get("/:pubkey/follows", nostr.follows);
-app.get("/:pubkey/events", nostr.events);
-app.get("/event/:id", nostr.event);
-app.get("/event/:id/full", nostr.event);
-app.post("/event", auth, nostr.publish);
-app.post("/parseEvent", nostr.parse);
-app.get("/zaps/:id", nostr.zaps);
-app.post("/zap", auth, nostr.zap);
-app.post("/zapRequest", auth, nostr.zapRequest);
-app.get("/thread/:id", nostr.thread);
 
 app.get("/info", payments.info);
 app.post("/sendinvoice", auth, payments.sendinvoice);
@@ -144,7 +126,6 @@ app.post(
 );
 app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
-app.post("/nostrAuth", users.nostrAuth);
 app.get("/app/:pubkey", auth, users.app);
 app.get("/apps", auth, users.apps);
 app.post("/app", auth, users.updateApp);
@@ -176,13 +157,6 @@ app.post("/shopify/:id", shopify);
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
 app.get("/bolt12", fixBolt12);
-
-app.get("/cash/:id/:version", ecash.get);
-app.post("/cash", ecash.save);
-app.post("/claim", auth, ecash.claim);
-app.post("/mint", auth, ecash.mint);
-app.post("/melt", auth, ecash.melt);
-app.post("/ecash/:id", ecash.receive);
 
 app.get("/replay/:index", (req, res) => {
   replay(req.params.index);

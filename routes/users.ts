@@ -5,7 +5,10 @@ import { requirePin } from "$lib/auth";
 import { db, g, ga, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
+// Nostr imports removed - creating stubs
+const serverPubkey2 = ""; // Stub - nostr removed
+const getNostrUser = async (key: string) => { throw new Error("Nostr removed"); };
+const getProfile = async (key: string) => { throw new Error("Nostr removed"); };
 import { reconcile } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
@@ -112,7 +115,7 @@ export default {
         } catch (e) {}
       }
 
-      const user = await getNostrUser(key);
+      const user = await getUser(key);
       res.send(pick(user, fields));
     } catch (e) {
       err("problem getting user", key, e.message);
@@ -403,10 +406,10 @@ export default {
 
       let user = await getUser(key);
       if (!user) {
-        const k0 = await getProfile(key);
-        let username = k0?.name?.replace(/[^a-zA-Z0-9 ]/g, "");
+        // Nostr removed - simplified registration
+        let username = key.substr(0, 24);
         const exists = await getUser(username);
-        if (!username || exists) username = key.substr(0, 24);
+        if (exists) username = key.substr(0, 24) + Math.random().toString(36).substr(2, 4);
 
         user = {
           username,
@@ -415,10 +418,6 @@ export default {
         };
 
         user = await register(user, ip);
-        user.display = k0.display_name || k0.displayName;
-        user.picture = k0.picture;
-        user.banner = k0.banner;
-        user.about = k0.about;
         await s(`user:${user.id}`, user);
       }
 
@@ -912,7 +911,7 @@ export default {
       }),
     );
 
-    app.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${app.secret}&lud16=${lud16}`;
+    app.nwc = undefined; // NWC removed
     app.payments = payments.filter((p) => p);
 
     res.send(app);
@@ -928,7 +927,7 @@ export default {
     await Promise.all(
       apps.map(async (a) => {
         if (a.secret)
-          a.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
+          a.nwc = undefined; // NWC removed
 
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
         let payments = await Promise.all(

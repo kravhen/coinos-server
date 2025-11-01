@@ -5,8 +5,6 @@ import { l, warn } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { got } from "got";
-import { getPublicKey, nip19 } from "nostr-tools";
-import { encrypt as nip49encrypt } from "nostr-tools/nip49";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 

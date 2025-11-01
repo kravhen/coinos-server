@@ -1,14 +1,10 @@
 import config from "$config";
 import { db, g } from "$lib/db";
-import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import mqtt from "$lib/mqtt";
-import { publish, serverSecret2 } from "$lib/nostr";
 import { emit } from "$lib/sockets";
-import { f, fiat, fmt, getUser, link, nada, t } from "$lib/utils";
-import { hexToBytes } from "@noble/hashes/utils";
-import { finalizeEvent, nip04 } from "nostr-tools";
+import { f, fiat, fmt, link, t } from "$lib/utils";
 import webpush from "web-push";
 
 if (config.vapid) {
@@ -79,51 +75,3 @@ export const notify = async (p, user, withdrawal) => {
   }
 };
 
-export const nwcNotify = async (p) => {
-  try {
-    const user = await getUser(p.uid);
-    const pubkeys = await db.sMembers(`${user.id}:apps`);
-    if (pubkeys.length) {
-      let payment_hash = "";
-      if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
-      for (const pubkey of pubkeys) {
-        const { notify } = await g(`app:${pubkey}`);
-        if (!notify) continue;
-
-        l("notifying", pubkey, p.type, p.amount);
-        const notification = {
-          type: p.amount > 0 ? "incoming" : "outgoing",
-          invoice: p.hash,
-          description: p.memo,
-          preimage: p.ref,
-          payment_hash: payment_hash,
-          amount: Math.abs(p.amount) * 1000,
-          fees_paid: (parseInt(p.fee) || 0) * 1000,
-          created_at: Math.round(p.created / 1000),
-          settled_at: Math.round(p.created / 1000),
-        };
-
-        const payload = JSON.stringify({
-          notification_type: p.amount > 0 ? "payment_received" : "payment_sent",
-          notification,
-        });
-
-        const content = await nip04.encrypt(serverSecret2, pubkey, payload);
-
-        const unsigned = {
-          content,
-          tags: [["p", pubkey]],
-          kind: 23196,
-          created_at: Math.floor(Date.now() / 1000),
-        };
-
-        const event = finalizeEvent(unsigned, hexToBytes(serverSecret2));
-
-        publish(event).catch(nada);
-      }
-    }
-  } catch (e) {
-    console.log(e);
-    warn("nwc notification failed", e.message);
-  }
-};

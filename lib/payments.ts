@@ -4,8 +4,7 @@ import { db, g, ga, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
-import { handleZap } from "$lib/nostr";
-import { notify, nwcNotify } from "$lib/notifications";
+import { notify } from "$lib/notifications";
 import { squarePayment } from "$lib/square";
 import {
   SATS,
@@ -168,7 +167,6 @@ export const debit = async ({
     .exec();
 
   l(user.username, "sent", type, amount);
-  if (![PaymentType.lightning, PaymentType.bolt12].includes(type)) nwcNotify(p);
 
   return p;
 };
@@ -316,7 +314,6 @@ export const completePayment = async (inv, p, user) => {
     }
   }
 
-  nwcNotify(p);
   notify(p, user, withdrawal);
 
   squarePayment(p, user);
@@ -609,14 +606,6 @@ export const sendInternal = async ({
   const p = await debit({ hash, amount, memo, user: sender });
   await credit({ hash, amount, memo, ref: sender.id });
 
-  if (invoice.memo?.includes("9734")) {
-    const { invoices } = await ln.listinvoices({ invstring: hash });
-    const inv = invoices[0];
-    inv.payment_preimage = p.id;
-    inv.paid_at = Math.floor(Date.now() / 1000);
-    handleZap(inv, sender.pubkey).catch(console.log);
-  }
-
   return p;
 };
 
@@ -867,7 +856,6 @@ const finalize = async (r, p) => {
 
   await db.sRem("pending", p.hash);
   l("payment completed", p.id, r.payment_preimage);
-  nwcNotify(p);
 
   const maxfee = p.fee;
   const { amount_msat } = await ln.decode(p.hash);
