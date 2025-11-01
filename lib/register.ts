@@ -62,9 +62,12 @@ export default async (user, ip) => {
 
   const bytes = randomBytes(32);
   const secret = bytesToHex(bytes);
+  // Generate app.pubkey as a simple random hex identifier (64 chars like Nostr pubkey format)
+  const appPubkey = bytesToHex(randomBytes(32));
   const app = {
     uid: id,
     secret,
+    pubkey: appPubkey,
     max_amount: 1000000,
     budget_renewal: "weekly",
     name: username,

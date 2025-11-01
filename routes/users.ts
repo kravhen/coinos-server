@@ -19,6 +19,7 @@ import rpc from "@coinos/rpc";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
+import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
@@ -965,7 +966,8 @@ export default {
       let app = await g(pubkey);
 
       if (app && uid !== app.uid) fail("Unauthorized");
-      if (secret) pubkey = getPublicKey(secret);
+      // Stub - if secret provided, generate random pubkey identifier (no Nostr derivation)
+      if (secret && !pubkey) pubkey = bytesToHex(randomBytes(32));
       notify = String(notify) === "true";
 
       app = {
