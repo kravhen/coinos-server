@@ -10,7 +10,7 @@ import { v4 } from "uuid";
 
 const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
-  let { password, pubkey, username } = user;
+  let { password, username } = user;
   l("registering", username);
 
   const reserved = ["ecash"];
@@ -54,16 +54,6 @@ export default async (user, ip) => {
   user.migrated = true;
   user.locktime = 300;
 
-  let sk;
-  if (!pubkey) {
-    sk = randomBytes(32);
-    pubkey = getPublicKey(sk);
-    user.pubkey = pubkey;
-    user.nsec = nip49encrypt(sk, password);
-  }
-
-  user.npub = nip19.npubEncode(pubkey);
-
   const account = JSON.stringify({
     id,
     type: "ecash",
@@ -75,7 +65,6 @@ export default async (user, ip) => {
   const app = {
     uid: id,
     secret,
-    pubkey: getPublicKey(bytes),
     max_amount: 1000000,
     budget_renewal: "weekly",
     name: username,
@@ -88,17 +77,12 @@ export default async (user, ip) => {
   db.multi()
     .set(`user:${id}`, JSON.stringify(user))
     .set(`user:${username}`, id)
-    .set(`user:${pubkey}`, id)
     .set(`balance:${id}`, 0)
     .set(`account:${id}`, account)
-    .set(`${pubkey}:follows:n`, 0)
-    .set(`${pubkey}:followers:n`, 0)
-    .set(`${pubkey}:pubkeys`, "[]")
     .lPush(`${id}:accounts`, id)
     .exec();
 
   l("new user", username);
-  if (sk) user.sk = bytesToHex(sk);
 
   return user;
 };
