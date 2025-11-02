@@ -5,7 +5,6 @@ import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { notify } from "$lib/notifications";
-import { squarePayment } from "$lib/square";
 import {
   SATS,
   btc,
