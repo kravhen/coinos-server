@@ -1,6 +1,5 @@
 import config from "$config";
 import { db, g, s } from "$lib/db";
-import { request } from "$lib/ecash";
 import ln from "$lib/ln";
 import { emit } from "$lib/sockets";
 import { SATS, bip21, fail, getInvoice, getUser } from "$lib/utils";
@@ -127,8 +126,7 @@ export const generate = async ({ invoice, user }) => {
   } else if (type === PaymentType.internal) {
     hash = id;
   } else if (type === PaymentType.ecash) {
-    hash = id;
-    text = request(id, amount, memo);
+    fail("Ecash functionality has been removed");
   } else {
     fail(`unrecognized type ${type}`);
   }

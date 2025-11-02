@@ -15,8 +15,6 @@ import lnurl from "$routes/lnurl";
 import locations from "$routes/locations";
 import payments from "$routes/payments";
 import rates from "$routes/rates";
-import shopify from "$routes/shopify";
-import square from "$routes/square";
 import users from "$routes/users";
 
 try {
@@ -68,10 +66,6 @@ app.post("/gateway", payments.gateway);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
-
-app.get("/square/connect", auth, square.connect);
-app.get("/square/auth", auth, square.auth);
-app.post("/square/payment", square.payment);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
@@ -151,8 +145,6 @@ app.get("/items/:id", items.get);
 app.post("/items", auth, items.create);
 app.post("/items/delete", auth, items.del);
 app.post("/items/sort", auth, items.sort);
-
-app.post("/shopify/:id", shopify);
 
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);

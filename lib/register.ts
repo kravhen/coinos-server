@@ -56,7 +56,7 @@ export default async (user, ip) => {
 
   const account = JSON.stringify({
     id,
-    type: "ecash",
+    type: "internal",
     name: "Spending",
   });
 

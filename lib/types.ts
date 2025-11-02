@@ -23,11 +23,7 @@ export interface User {
   linked: string;
   locktime: string;
   memoPrompt: string;
-  nip5: string;
   notify: string;
-  npub: string;
-  nsec: string;
-  nwc: string;
   payments: string;
   picture: string;
   profile: string;
@@ -36,8 +32,6 @@ export interface User {
   push: string;
   reserve: string;
   seed: string;
-  shopifyStore: string;
-  shopifyToken: string;
   theme: string;
   threshold: string;
   twofa: string;
@@ -51,7 +45,6 @@ export enum PaymentType {
   lightning = "lightning",
   fund = "fund",
   liquid = "liquid",
-  ecash = "ecash",
   reconcile = "reconcile",
   bolt12 = "bolt12",
 }
