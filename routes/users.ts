@@ -5,10 +5,6 @@ import { requirePin } from "$lib/auth";
 import { db, g, ga, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-// Nostr imports removed - creating stubs
-const serverPubkey2 = ""; // Stub - nostr removed
-const getNostrUser = async (key: string) => { throw new Error("Nostr removed"); };
-const getProfile = async (key: string) => { throw new Error("Nostr removed"); };
 import { reconcile } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
@@ -18,16 +14,13 @@ import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
-import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
-import type { ProfilePointer } from "nostr-tools/nip19";
 
 const { host } = new URL(process.env.URL);
-const relay = encodeURIComponent(config.publicRelay);
 
 export default {
   upload,
@@ -53,7 +46,6 @@ export default {
       }
 
       user.prompt = !!user.prompt;
-      if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
 
       res.send(pick(user, whitelist));
     } catch (e) {
@@ -104,18 +96,6 @@ export default {
     } = req;
     key = key.toLowerCase().replace(/\s/g, "");
     try {
-      if (key.startsWith("npub")) {
-        try {
-          key = nip19.decode(key).data;
-        } catch (e) {}
-      }
-
-      if (key.startsWith("nprofile")) {
-        try {
-          ({ pubkey: key } = nip19.decode(key).data as ProfilePointer);
-        } catch (e) {}
-      }
-
       const user = await getUser(key);
       res.send(pick(user, fields));
     } catch (e) {
@@ -213,7 +193,6 @@ export default {
       let { pubkey } = body;
       if (pubkey) {
         pubkey = pubkey.trim();
-        if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
         exists = await getUser(pubkey);
         const un = user.username.toLowerCase().replace(/\s/g, "");
         const existingUsername = exists?.username
@@ -225,19 +204,10 @@ export default {
           else fail("Key in use by another account");
         }
 
-        const event = JSON.parse(body.event);
-        const challenge = event.tags.find((t) => t[0] === "challenge")[1];
-        const c = await g(`challenge:${challenge}`);
-        if (!c) fail("Invalid or expired challenge");
-
-        if (!verifyEvent(event) || event.pubkey !== pubkey)
-          fail("Invalid signature or challenge mismatch.");
-
         pubkey = pubkey.replace(/\s*/g, "");
         if (pubkey.length !== 64) fail(`Invalid pubkey ${pubkey}`);
         await db.del(`user:${user.pubkey}`);
         user.pubkey = pubkey;
-        user.nsec = undefined;
       }
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
@@ -274,9 +244,7 @@ export default {
         "language",
         "locktime",
         "memoPrompt",
-        "nip5",
         "notify",
-        "nsec",
         "picture",
         "prompt",
         "push",
@@ -318,7 +286,6 @@ export default {
       );
 
       await s(`user:${user.id}`, user);
-      if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
 
       emit(user.id, "user", user);
       res.send({ user });
@@ -388,62 +355,6 @@ export default {
     const id = v4();
     await db.set(`challenge:${id}`, id, { EX: 300 });
     res.send({ challenge: id });
-  },
-
-  async nostrAuth(req, res) {
-    try {
-      const { event, challenge, twofa } = req.body;
-      const ip = req.headers["cf-connecting-ip"];
-      const c = await g(`challenge:${challenge}`);
-      const { pubkey: key, kind } = event;
-      if (kind !== 27235) fail("Invalid event");
-      if (!c) fail("Invalid or expired login challenge");
-
-      if (
-        !verifyEvent(event) ||
-        event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge
-      )
-        fail("Invalid signature or challenge mismatch.");
-
-      let user = await getUser(key);
-      if (!user) {
-        // Nostr removed - simplified registration
-        let username = key.substr(0, 24);
-        const exists = await getUser(username);
-        if (exists) username = key.substr(0, 24) + Math.random().toString(36).substr(2, 4);
-
-        user = {
-          username,
-          password: v4(),
-          pubkey: key,
-        };
-
-        user = await register(user, ip);
-        await s(`user:${user.id}`, user);
-      }
-
-      const { username } = user;
-      if (
-        await db.sIsMember(
-          "compromised",
-          username.replace(/\s/g, "").toLowerCase(),
-        )
-      ) {
-        warn("compromised nostr auth attempt");
-        fail("unauthorized");
-      }
-
-      l("nostr login", username, ip);
-
-      const payload = { id: user.id };
-      const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-      user = pick(user, whitelist);
-      res.send({ user, token });
-    } catch (e) {
-      err("login error", e.message, req.socket.remoteAddress);
-      res.code(401).send({});
-    }
   },
 
   async subscriptions(req, res) {
@@ -912,7 +823,6 @@ export default {
       }),
     );
 
-    app.nwc = undefined; // NWC removed
     app.payments = payments.filter((p) => p);
 
     res.send(app);
@@ -927,9 +837,6 @@ export default {
 
     await Promise.all(
       apps.map(async (a) => {
-        if (a.secret)
-          a.nwc = undefined; // NWC removed
-
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
         let payments = await Promise.all(
           pids.map((pid) => g(`payment:${pid}`)),
